@@ -11,3 +11,6 @@
 > 
 > drawing coordinates have been extracted from xml file within .docx
 > 
+
+## 12/03/2025
+> coordinates have been separated and imported as svg into the html. their position is incorrect
