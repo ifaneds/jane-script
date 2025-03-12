@@ -5,9 +5,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.prefs.Preferences;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
@@ -155,13 +158,34 @@ public class App extends Application {
 				List<Trace> traces = inkml.getTraces();
 				if (traces != null) {
 					for (Trace trace : traces) {
-						System.out.println("Trace value: " + trace.getValue());
+						//System.out.println("Trace value: " + trace.getValue());
 					}
 				} else {
 					System.out.println("No traces found.");
 				}
 
 				// ... process traces ...
+				for (Trace trace : traces) {
+					String traceData = trace.getValue();
+
+					List<Point> points = parseCoordinates(traceData);
+					for (Point point : points) {
+						//System.out.println(point);
+					}
+					StringBuilder pathData = new StringBuilder();
+					for (int i = 0; i < points.size(); i++) {
+						Point point = points.get(i);
+						if (i == 0) {
+							pathData.append("M ").append((point).getX()).append(" ").append((point).getY()).append(" ");
+						} else {
+							pathData.append("L ").append((point).getX()).append(" ").append((point).getY()).append(" ");
+						}
+					}
+					// Create SVG element
+					String svgMarkup = "<svg width=\"500\" height=\"300\">" + "<path d=\"" + pathData.toString()
+							+ "\" stroke=\"black\" />" + "</svg>";
+					htmlContent = svgMarkup + htmlContent;
+				}
 
 				// Close the package
 				opcPackage.close();
@@ -169,9 +193,32 @@ public class App extends Application {
 			} catch (IOException | InvalidFormatException | JAXBException e) {
 				e.printStackTrace();
 			}
-
 			return htmlContent;
+
 		}
+	}
+
+	private List<Point> parseCoordinates(String traceData) {
+		List<Point> coordinates = new ArrayList<Point>();
+		String data = traceData;
+		String regex = "([-+]?\\d+)[\\s',\"]*([-+]?\\d+)";
+		Pattern pattern = Pattern.compile(regex);
+		Matcher matcher = pattern.matcher(data);
+
+		while (matcher.find()) {
+			try {
+				double x = Double.parseDouble(matcher.group(1));
+				double y = Double.parseDouble(matcher.group(2));
+				coordinates.add(new Point(x, y));
+
+			} catch (NumberFormatException e) {
+				// Handle parsing errors (e.g., log the error, skip the point)
+				System.err.println("Error parsing coordinates: " + matcher.group());
+			}
+		}
+		
+
+		return coordinates;
 	}
 
 	private void ProcessWord(File file) throws IOException {
